@@ -8,7 +8,8 @@ export default class App extends React.Component {
   constructor() {
     super();
     this.state = {
-      todos: []
+      todos: [],
+      newTodo: ''
     }
   }
 
@@ -26,6 +27,32 @@ export default class App extends React.Component {
       .catch((err) => console.log(err));
   };
 
+handleInputChange = (e) => {//handler to update new todo item in STATE
+  e.preventDefault();
+  this.setState({ newTodo: e.target.value })
+}
+
+handleAddTodo = () => {
+  const { todos, newTodo } = this.state;
+  const newTodoItem = { id: todos.length + 1, name: newTodo, completed: false };
+
+  fetch(URL, {
+    method: 'POST',
+    headers: {
+      'Content-type': 'application/json'
+    },
+    body: JSON.stringify(newTodoItem)
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log('New todo added:', data);
+    this.setState(prevState => ({
+      todos: [...prevState.todos, newTodoItem],
+      newTodo: ''
+    }));
+  })
+  .catch(err => console.error('Error adding todo:', err));
+};
 
 
 
@@ -34,7 +61,11 @@ export default class App extends React.Component {
       <>
       <TodoList todos={this.state.todos} />
       <br/>
-      <Form />
+      <Form 
+      value={this.state.newTodo}
+      onChange={this.handleInputChange}
+      onSubmit={this.handleAddTodo}
+      />
       </>
       
     )
