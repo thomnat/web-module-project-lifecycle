@@ -1,73 +1,96 @@
-import React from 'react'
-import Form from './Form'
-import TodoList from './TodoList'
+import React from "react";
+import Form from "./Form"
+import TodoList from "./TodoList";
 
-const URL = 'http://localhost:9000/api/todos'
+import axios from "axios";
+
+const URL = "http://localhost:9000/api/todos";
 
 export default class App extends React.Component {
   constructor() {
     super();
     this.state = {
       todos: [],
-      newTodo: ''
-    }
+      error: "",
+      todoNameInput: "",
+      displayCompleteds: true,
+  }
+}
+
+
+  onTodoNameInputChange = (e) => {
+    const { value } = e.target
+    this.setState({ ...this.state, todoNameInput: value })
+  }
+
+  resetForm = () => this.setState({ ...this.state, todoNameInput: "" })
+  setAxiosResponseError = err => this.setState({ ...this.state, error: err.response.data.message })
+
+  postNewTodo = () => {
+    axios
+      .post(URL, { name: this.state.todoNameInput })
+      .then((res) => {
+        this.fetchAllTodos()
+        this.setState({ ...this.state, todos: this.state.todos.concat(res.data.data) })
+        this.resetForm()
+      })
+      .catch(this.setAxiosResponseError)
+   }
+  
+
+  onTodoFormSubmit = (e) => {
+    e.preventDefault()
+    this.postNewTodo()
+  }
+
+  fetchAllTodos = () => {
+    axios
+      .get(URL)
+      .then((res) => {
+        this.setState({ ...this.state, todos: res.data.data });
+      })
+      .catch(this.setAxiosResponseError)
+  }
+
+  toggleCompleted = (id) => () => {
+    axios.patch(`${URL}/${id}`)
+      .then(res => {
+        this.setState({
+          ...this.state, todos: this.state.todos.map(td => {
+            if (td.id !== id) return td
+            return res.data.data
+          })
+        })
+      })
+      .catch(this.setAxiosResponseError)
+  }
+
+  toggleDisplayCompleteds = () => {
+    this.setState({...this.state, displayCompleteds: !this.state.displayCompleteds })
   }
 
   componentDidMount() {
-    this.getTodos();
+    this.fetchAllTodos()
   }
-
-  getTodos = () => {
-    fetch(URL)
-      .then((res) => res.json())
-      .then((todos) => {
-        console.log(todos)
-        this.setState({ todos: todos.data })
-  })
-      .catch((err) => console.log(err));
-  };
-
-handleInputChange = (e) => {//handler to update new todo item in STATE
-  e.preventDefault();
-  this.setState({ newTodo: e.target.value })
-}
-
-handleAddTodo = () => {
-  const { todos, newTodo } = this.state;
-  const newTodoItem = { id: todos.length + 1, name: newTodo, completed: false };
-
-  fetch(URL, {
-    method: 'POST',
-    headers: {
-      'Content-type': 'application/json'
-    },
-    body: JSON.stringify(newTodoItem)
-  })
-  .then(response => response.json())
-  .then(data => {
-    console.log('New todo added:', data);
-    this.setState(prevState => ({
-      todos: [...prevState.todos, newTodoItem],
-      newTodo: ''
-    }));
-  })
-  .catch(err => console.error('Error adding todo:', err));
-};
-
 
 
   render() {
     return (
-      <>
-      <TodoList todos={this.state.todos} />
-      <br/>
-      <Form 
-      value={this.state.newTodo}
-      onChange={this.handleInputChange}
-      onSubmit={this.handleAddTodo}
-      />
-      </>
-      
+      <div>
+        <div id="error">Error: {this.state.error}</div>
+        <TodoList 
+        todos={this.state.todos}
+        displayCompleteds={this.state.displayCompleteds}
+        toggleCompleted={this.toggleCompleted}
+        />
+       <Form 
+       onToDoFormSubmit={this.onTodoFormSubmit}
+       onTodoNameInputChange={this.onTodoNameInputChange}
+       toggleDisplayCompleteds={this.toggleDisplayCompleteds}
+       todoNameInput={this.state.todoNameInput}
+       displayCompleteds={this.state.displayCompleteds}
+       />
+      </div>
     )
   }
 }
